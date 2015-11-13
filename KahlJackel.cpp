@@ -40,7 +40,7 @@ void KahlJackel::calculateStockPath(const mat &draws, const vec &variancePath, v
     int vec_size = stockDraws.size();
     double dt = myOption->T / static_cast<double>(vec_size);
     double exponential;
-    double halfRhoEtaDt = 0.5 * rho * eta * dt;
+    double halfRhoEtaDt = -0.25 * rho * eta * dt;
 
     for (int i = 1; i < vec_size; i++) {
         double vCurrent_max = std::max(variancePath(i), 0.0);
