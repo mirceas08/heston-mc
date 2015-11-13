@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     HestonDiscretization* myHestonPT = new HestonEulerPT(myOption, kappa, theta, eta, rho);
     HestonDiscretization* myHestonMilstein = new HestonMilstein(myOption, kappa, theta, eta, rho);
     HestonDiscretization* myHestonKJ = new KahlJackel(myOption, kappa, theta, eta, rho);
-    HestonDiscretization* myHestonTV = new TranformedVolatility(myOption, kappa, theta, eta, rho);
+    HestonDiscretization* myHestonTV = new TransformedVolatility(myOption, kappa, theta, eta, rho);
 
     vec stockPath = zeros<vec>(numIntervals);
     stockPath.fill(S_0);

@@ -5,12 +5,12 @@
 
 /* ------------------- Transformed Volatility scheme ----------------------- */
 
-TranformedVolatility::TranformedVolatility(Option* _myOption, double _kappa, double _theta, double _eta, double _rho):
+TransformedVolatility::TransformedVolatility(Option* _myOption, double _kappa, double _theta, double _eta, double _rho):
     HestonDiscretization(_myOption, _kappa, _theta, _eta, _rho) {}
 
-TranformedVolatility::~TranformedVolatility() {}
+TransformedVolatility::~TransformedVolatility() {}
 
-void TranformedVolatility::calculateVariancePath(const mat &varianceDraws, vec &volatilityPath)
+void TransformedVolatility::calculateVariancePath(const mat &varianceDraws, vec &volatilityPath)
 {
     int vec_size = varianceDraws.size();
     double dt = myOption->T / static_cast<double>(vec_size);
@@ -19,7 +19,7 @@ void TranformedVolatility::calculateVariancePath(const mat &varianceDraws, vec &
 
     for (int i = 1; i < vec_size; i++) {
         u = volatilityPath(i-1) + 0.5 * kappa * (parenthesisTerm / volatilityPath(i-1) - volatilityPath(i-1)) * dt;
-        gammaStar = 0.5 * (volatilityPath(i-1) + u)
+        gammaStar = 0.5 * (volatilityPath(i-1) + u);
         thetaStar = parenthesisTerm / gammaStar;
 
         volatilityPath(i) = volatilityPath(i-1) + 0.5 * kappa * (thetaStar - volatilityPath(i-1)) * dt +
@@ -27,7 +27,7 @@ void TranformedVolatility::calculateVariancePath(const mat &varianceDraws, vec &
     }
 }
 
-void TranformedVolatility::calculateStockPath(const mat &stockDraws, const vec &volatilityPath, vec &stockPath)
+void TransformedVolatility::calculateStockPath(const mat &stockDraws, const vec &volatilityPath, vec &stockPath)
 {
     double exponential;
 
