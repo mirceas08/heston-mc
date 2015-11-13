@@ -6,6 +6,7 @@
 #include "hestonEuler.h"
 #include "hestonMilstein.h"
 #include "KahlJackel.h"
+#include "transformedVolatility.h"
 #include "helpers.h"
 
 #include <armadillo>
@@ -42,6 +43,7 @@ int main(int argc, char **argv)
     HestonDiscretization* myHestonPT = new HestonEulerPT(myOption, kappa, theta, eta, rho);
     HestonDiscretization* myHestonMilstein = new HestonMilstein(myOption, kappa, theta, eta, rho);
     HestonDiscretization* myHestonKJ = new KahlJackel(myOption, kappa, theta, eta, rho);
+    HestonDiscretization* myHestonTV = new TranformedVolatility(myOption, kappa, theta, eta, rho);
 
     vec stockPath = zeros<vec>(numIntervals);
     stockPath.fill(S_0);
@@ -107,19 +109,33 @@ int main(int argc, char **argv)
 //    optionPrice = payoffSum / static_cast<double>(numSims) * std::exp(-r*T);
 //    cout << "Option price with Milstein discretization: " << optionPrice << endl;
 
+//    payoffSum = 0.0;
+//    for (int i = 0; i < numSims; i++) {
+//        mat correlatedPath = zeros<mat>(2, numIntervals);
+//        generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
+//
+//        myHestonKJ->calculateVariancePath(correlatedPath.row(1), volPath);
+//        myHestonKJ->calculateStockPath(correlatedPath, volPath, stockPath);
+//
+//        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1)) * std::exp(-r*T);
+//    }
+//
+//    optionPrice = payoffSum / static_cast<double>(numSims);
+//    cout << "Option price with Kahl-Jackel discretization: " << optionPrice << endl;
+
     payoffSum = 0.0;
     for (int i = 0; i < numSims; i++) {
         mat correlatedPath = zeros<mat>(2, numIntervals);
         generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
 
         myHestonKJ->calculateVariancePath(correlatedPath.row(1), volPath);
-        myHestonKJ->calculateStockPath(correlatedPath, volPath, stockPath);
+        myHestonKJ->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
 
         payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1)) * std::exp(-r*T);
     }
 
     optionPrice = payoffSum / static_cast<double>(numSims);
-    cout << "Option price with Kahl-Jackel discretization: " << optionPrice << endl;
+    cout << "Option price with Transformed Volatility scheme: " << optionPrice << endl;
 
 
     delete myPayoff;
@@ -129,6 +145,7 @@ int main(int argc, char **argv)
     delete myHestonPT;
     delete myHestonMilstein;
     delete myHestonKJ;
+    delete myHestonTV;
 
 
     return 0;
