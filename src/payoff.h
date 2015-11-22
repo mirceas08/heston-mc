@@ -1,7 +1,6 @@
 #ifndef PAYOFF_H
 #define PAYOFF_H
 
-//#include <armadillo>
 #include <algorithm>
 
 // base payoff class
