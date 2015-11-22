@@ -2,6 +2,7 @@
 #define TRANSFORMEDVOLATILITY_CPP
 
 #include "transformedVolatility.h"
+#include "math.h"
 
 /* ------------------- Transformed Volatility scheme with Central Discretization ----------------------- */
 
