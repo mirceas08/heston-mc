@@ -14,139 +14,123 @@ using namespace arma;
 
 int main(int argc, char **argv)
 {
-    //srand(time(NULL));
     arma_rng::set_seed_random();
 
-    int numSims = 100000;
-    int numIntervals = 1000;
+    int numSims;                            // number of simulations
+    int numIntervals;                       // number of time steps
+    double S0;                              // initial spot price
+    double K;                               // strike
+    double r;                               // risk-free rate
+    double v0;                              // initial variance
+    double T;                               // maturity
+    double kappa;                           // speed of reversion
+    double theta;                           // long run average variance
+    double eta;                             // vol of vol
+    double rho;                             // correlation between the two processes
+    std::string discretizationScheme;       // discretization scheme
 
-    double S_0 = 100.0;    // Initial spot price
-    double K = 100.0;      // Strike price
-    double r = 0.0319;     // Risk-free rate
-    double v_0 = 0.010201; // Initial volatility
-    double T = 1.00;       // One year until expiry
+    std::string dataFile = "data/data.dat";
+    std::ifstream fIN(dataFile.c_str());
+    std::string line;
 
-    double kappa = 6.21;   // Mean-reversion rate
-    double theta = 0.019;  // Long run average volatility
-    double eta = 0.61;      // "Vol of vol"
+    while (std::getline(fIN, line)) {
+        std::stringstream stream(line);
+        std::string variable;
+        std::string value;
 
-    double rho = -0.7;     // Correlation of asset and volatility
+        stream >> variable >> value;
+
+        if (variable == "numSims")
+            numSims = static_cast<int>(atoi(value.c_str()));
+        else if (variable == "timeSteps")
+            numIntervals = static_cast<int>(atoi(value.c_str()));
+        else if (variable == "S0")
+            S0 = atof(value.c_str());
+        else if (variable == "strike")
+            K = atof(value.c_str());
+        else if (variable == "r")
+            r = atof(value.c_str());
+        else if (variable == "v0")
+            v0 = atof(value.c_str());
+        else if (variable == "maturity")
+            T = atof(value.c_str());
+        else if (variable == "kappa")
+            kappa = atof(value.c_str());
+        else if (variable == "theta")
+            theta = atof(value.c_str());
+        else if (variable == "eta")
+            eta = atof(value.c_str());
+        else if (variable == "rho")
+            rho = atof(value.c_str());
+        else if (variable == "discretizationScheme")
+            discretizationScheme = value;
+    }
+
+    transform(discretizationScheme.begin(), discretizationScheme.end(), discretizationScheme.begin(), ::toupper);
+
+    /* ------------------------ Set correlation matrix and compute Cholesky ------------------------ */
     mat correlationMatrix = eye<mat>(2,2);
     correlationMatrix(0,1) = rho;
     correlationMatrix(1,0) = rho;
     mat choleskyMatrix = chol(correlationMatrix, "lower");
 
+    /* ------------------------ Set option, payoff and discretization scheme objects ------------------------ */
     PayOff* myPayoff = new PayOffCall(K);
     Option* myOption = new Option(K, r, T, myPayoff);
-    HestonDiscretization* myHeston = new HestonEulerFT(myOption, kappa, theta, eta, rho);
-    HestonDiscretization* myHestonReflection = new HestonEulerReflection(myOption, kappa, theta, eta, rho);
-    HestonDiscretization* myHestonPT = new HestonEulerPT(myOption, kappa, theta, eta, rho);
-    HestonDiscretization* myHestonMilstein = new HestonMilstein(myOption, kappa, theta, eta, rho);
-    HestonDiscretization* myHestonKJ = new KahlJackel(myOption, kappa, theta, eta, rho);
-    HestonDiscretization* myHestonTV = new TransformedVolatility(myOption, kappa, theta, eta, rho);
+    HestonDiscretization* scheme;
 
-    vec stockPath = zeros<vec>(numIntervals);
-    stockPath.fill(S_0);
-    vec volPath = zeros<vec>(numIntervals);
-    volPath.fill(v_0);
+    if (discretizationScheme == "EULER-FT")
+        scheme = new HestonEulerFT(myOption, kappa, theta, eta, rho);
+    else if (discretizationScheme == "EULER-PT")
+        scheme = new HestonEulerPT(myOption, kappa, theta, eta, rho);
+    else if (discretizationScheme == "EULER-REFLECTION")
+        scheme = new HestonEulerReflection(myOption, kappa, theta, eta, rho);
+    else if (discretizationScheme == "MILSTEIN")
+        scheme = new HestonMilstein(myOption, kappa, theta, eta, rho);
+    else if (discretizationScheme == "KAHL-JACKEL")
+        scheme = new KahlJackel(myOption, kappa, theta, eta, rho);
+    else if (discretizationScheme == "TV_CD")
+        scheme = new TV_centralDiscretization(myOption, kappa, theta, eta, rho);
+    else if (discretizationScheme == "TV_MM")
+        scheme = new TV_momentMatching(myOption, kappa, theta, eta, rho);
+    else
+        scheme = new HestonEulerFT(myOption, kappa, theta, eta, rho);
 
-    double payoffSum;
+    vec stockPath = zeros<vec>(numIntervals+1);
+    vec volPath = zeros<vec>(numIntervals+1);
+    stockPath.fill(S0);
+    volPath.fill(v0);
+
+    vec payoff(numSims);
     double optionPrice;
 
-//    payoffSum = 0.0;
-//    for (int i = 0; i < numSims; i++) {
-//        mat correlatedPath = zeros<mat>(2, numIntervals);
-//        generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
-//
-//        myHeston->calculateVariancePath(correlatedPath.row(1), volPath);
-//        myHeston->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
-//
-//        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1)) * std::exp(-r*T);
-//    }
-//
-//    optionPrice = payoffSum / static_cast<double>(numSims);
-//    cout << "Option price with full truncation: " << optionPrice << endl;
-//
-//    payoffSum = 0.0;
-//    for (int i = 0; i < numSims; i++) {
-//        mat correlatedPath = zeros<mat>(2, numIntervals);
-//        generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
-//
-//        myHestonReflection->calculateVariancePath(correlatedPath.row(1), volPath);
-//        myHestonReflection->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
-//
-//        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1));
-//    }
-//
-//    optionPrice = payoffSum / static_cast<double>(numSims) * std::exp(-r*T);
-//    cout << "Option price with reflection: " << optionPrice << endl;
-//
-//    payoffSum = 0.0;
-//    for (int i = 0; i < numSims; i++) {
-//        mat correlatedPath = zeros<mat>(2, numIntervals);
-//        generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
-//
-//        myHestonPT->calculateVariancePath(correlatedPath.row(1), volPath);
-//        myHestonPT->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
-//
-//        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1));
-//    }
-//
-//    optionPrice = payoffSum / static_cast<double>(numSims) * std::exp(-r*T);
-//    cout << "Option price with partial truncation: " << optionPrice << endl;
-//
-//    payoffSum = 0.0;
-//    for (int i = 0; i < numSims; i++) {
-//        mat correlatedPath = zeros<mat>(2, numIntervals);
-//        generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
-//
-//        myHestonMilstein->calculateVariancePath(correlatedPath.row(1), volPath);
-//        myHestonMilstein->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
-//
-//        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1));
-//    }
-//
-//    optionPrice = payoffSum / static_cast<double>(numSims) * std::exp(-r*T);
-//    cout << "Option price with Milstein discretization: " << optionPrice << endl;
-
-//    payoffSum = 0.0;
-//    for (int i = 0; i < numSims; i++) {
-//        mat correlatedPath = zeros<mat>(2, numIntervals);
-//        generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
-//
-//        myHestonKJ->calculateVariancePath(correlatedPath.row(1), volPath);
-//        myHestonKJ->calculateStockPath(correlatedPath, volPath, stockPath);
-//
-//        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1)) * std::exp(-r*T);
-//    }
-//
-//    optionPrice = payoffSum / static_cast<double>(numSims);
-//    cout << "Option price with Kahl-Jackel discretization: " << optionPrice << endl;
-
-    payoffSum = 0.0;
     for (int i = 0; i < numSims; i++) {
-        mat correlatedPath = zeros<mat>(2, numIntervals);
+        mat correlatedPath = zeros<mat>(2, numIntervals+1);
         generateNormalCorrelationPaths(choleskyMatrix, correlatedPath);
 
-        myHestonTV->calculateVariancePath(correlatedPath.row(1), volPath);
-        myHestonTV->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
+        if (discretizationScheme == "KAHL-JACKEL") {
+            scheme->calculateVariancePath(correlatedPath.row(1), volPath);
+            scheme->calculateStockPath(correlatedPath, volPath, stockPath);
+        }
+        else {
+            scheme->calculateVariancePath(correlatedPath.row(1), volPath);
+            scheme->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
+        }
 
-        payoffSum += myOption->payoff->operator()(stockPath(numIntervals-1)) * std::exp(-r*T);
+        payoff(i) += myOption->payoff->operator()(stockPath(numIntervals)) * std::exp(-r*T);
     }
 
-    optionPrice = payoffSum / static_cast<double>(numSims);
-    cout << "Option price with Transformed Volatility scheme: " << optionPrice << endl;
+    optionPrice = sum(payoff) / static_cast<double>(numSims);
+    cout << "Option price with " << discretizationScheme << ": " << optionPrice << endl;
 
+    double sampleVar = var(payoff);
+    double standardError = std::sqrt(sampleVar/numSims);
+
+    cout << "Standard error: " << standardError << endl;
 
     delete myPayoff;
     delete myOption;
-    delete myHeston;
-    delete myHestonReflection;
-    delete myHestonPT;
-    delete myHestonMilstein;
-    delete myHestonKJ;
-    delete myHestonTV;
-
+    delete scheme;
 
     return 0;
 }
