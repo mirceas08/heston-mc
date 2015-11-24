@@ -70,8 +70,7 @@ void TV_momentMatching::calculateVariancePath(const mat &varianceDraws, vec &vol
         m1 = firstMoment(theta, volatilityPath(i-1), kappa, dt);
         m2 = secondMoment(eta, kappa, dt);
 
-        //beta = std::sqrt( std::max(m1 - m2, 0.0) );
-        beta = std::max(std::sqrt(m1-m2), 0.0);
+        beta = std::sqrt( std::max(m1 - m2, 0.0) );
         thetaStar = (beta - volatilityPath(i-1) * exponential) / (1 - exponential);
 
         volatilityPath(i) = volatilityPath(i-1) + 0.5 * kappa * (thetaStar - volatilityPath(i-1)) * dt +
