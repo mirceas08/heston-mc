@@ -1,0 +1,15 @@
+-------------- required parameters --------------
+numSims 100000
+timeSteps 1000
+S0 100.0
+strike 100.0
+r 0.0319
+v0 0.010201
+maturity 1.0
+kappa 6.21
+theta 0.019
+eta 0.61
+rho -0.7
+-------------- optional parameters --------------
+discretizationScheme euler-ft
+
