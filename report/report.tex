@@ -1,0 +1,287 @@
+\title{{\sc The Heston stochastic volatility model: Taylor-based schemes and Monte Carlo simulation}\\
+{\normalsize Assignment for \textit{Advanced derivatives} class}}
+\author{\normalsize
+        Mircea Simionica\\
+        \normalsize  Student ID: 1814516\\
+        \normalsize  Bocconi University\\
+        \normalsize  Milan, Italy\\
+        \normalsize   mircea.simionica@gmail.com \\
+        \normalsize   mircea.simionica@studbocconi.it
+}
+\date{}
+
+\documentclass[12pt]{article}
+\usepackage[square,sort,comma,numbers]{natbib}
+\usepackage{wrapfig}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\lstset { %
+    language=C++,
+    backgroundcolor=\color{black!5}, % set backgroundcolor
+    basicstyle=\footnotesize,% basic font setting
+}
+\usepackage{natbib}
+\usepackage{amssymb,amsmath}
+\usepackage{mathrsfs}
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\numberwithin{equation}{section}
+\newcommand{\bs}{\mathbf{s}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bu}{\mathbf{u}}
+\newcommand{\appsection}[1]{\let\oldthesection\thesection
+  \renewcommand{\thesection}{Appendix \oldthesection}
+  \section{#1}\let\thesection\oldthesection}
+
+\begin{document}
+\maketitle
+\pagestyle{plain}
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\clearpage
+\pagenumbering{arabic}
+
+\begin{abstract}
+High Performance Computing (HPC) is the application of supercomputers to computationally intensive problems. Parallel programming has become the answer to the limitations that single-CPU computing is facing, such as frequency walls and memory bottlenecks. \\
+\end{abstract}
+
+\section{The Heston model}
+In the Black and Scholes model the stock path follows a geometric Brownian motion and its $\mathbb{Q}$-dynamics is governed by the following stochastic differential equation (SDE):
+\begin{equation*}
+dS_t = rS_tdt + \sigma S_tdW_t^\mathbb{Q}
+\end{equation*}
+An important pitfall of the celebrated model is the assumption of constant volatility. The model is useful for educational purposes, but once it is pushed into the market it fails to capture features such as volatility skews or volatility smiles. The Heston model extends the Black \& Scholes model and allows such features to exist by defining the volatility as a stochastic process of its own.\\
+\newline
+Let the triple $(\Omega,\mathscr{F},\mathbb{Q})$ be a probability space, with $\mathbb{Q}$ the risk neutral measure. The Heston model defines the $\mathbb{Q}$-dynamics of the stock $S$ with stochastic variance $\nu$ through the two-dimensional SDE:
+\begin{align}\label{HestonStock}
+dS_t = rS_tdt + \sqrt{\nu_t}S_tdW_t^S \\
+d\nu_t = \kappa(\theta - \nu_t)dt + \eta\sqrt{\nu_t}dW_t^\nu
+\end{align}
+The variance process follows a mean-reverting square root process. The speed of reversion $\kappa$, the long-term variance $\theta$ and the volatility of volatility $\eta$ are strictly positive constants. In order for the variance process to keep being positive the Feller condition must hold: $2\kappa\theta > \eta^2$. Moreover, $dW_t^S$ and $dW_t^\nu$ are correlated Brownian motions with instantaneous correlation $\rho$, so that
+\begin{equation*}
+dW_t^S dW_t^\nu = \rho dt
+\end{equation*}
+
+\section{Generating correlated random variables}
+The Heston stochastic volatility model requires two correlated Brownian motions for Monte Carlo modelling purposes. Let us consider the general case.\\
+\newline
+Let $Y_i \sim \mathcal{N}(\mu,\sigma^2)$ be a Gaussian random variable (RV). If we need to generate N such correlated random variables
+\begin{equation*}
+\textbf{Y} \sim \mathcal{N} (\mu, \Sigma)
+\end{equation*}  
+where $\textbf{Y}=(Y_1,...,Y_N)$ is the vector of correlated random variables, $\mu = (\mu_1,...\mu_N)$ the vector of means and $\Sigma$ the covariance matrix, the target vector $\textbf{Y}$ is given by
+\begin{equation*}
+\textbf{Y} = \mu + C\textbf{Z},
+\end{equation*} 
+with $\textbf{Z}$ a vector of uncorrelated Gaussian random variables and $C$ the square root of $\Sigma$, i.e. a matrix such that $CC^T=\Sigma$. A popular choice for $C$ is the Cholesky decomposition of $\Sigma$.\\
+\newline
+In particular, let us pick the case of standard normal random variables, which suits to our study. Since we are dealing with Gaussian random variables, the covariance matrix resumes to the correlation matrix. Let $L$ bet the lower triangular matrix coming from the Cholesky decomposition of the correlation matrix $\Sigma$. The existence of $L$ is assured by the fact that the correlation matrix is symmetric and positive definite. Now, if $\textbf{Z}$ is a vector of uncorrelated standard normal RVs, then $L\textbf{Z}$ will be a vector of standard normal RVs with correlation matrix $\Sigma$. To show this holds, we notice that $L\textbf{Z}$ will be normally distributed due to the fact that the normal distribution is closed under transformations. Then we compute the   first two moments:
+\begin{align*}
+\mu_{LZ} 	&= \mathbb{E}[L\textbf{Z}] = L\mathbb{E}[\textbf{Z}] = 0 \\
+\Sigma_{LZ} 	&= \mathbb{E}[ (L\textbf{Z} - \mathbb{E}[L\textbf{Z}]) (L\textbf{Z} - \mathbb{E}[L\textbf{Z}])^T ] = \mathbb{E}[L\textbf{Z}(L\textbf{Z})^T] \\
+&= \mathbb{E}[L\textbf{Z}\textbf{Z}^TL^T] = L \mathbb{E}[\textbf{ZZ}^T] L^T = LIL^T = LL^T = \Sigma 
+\end{align*}
+In conclusion, it is possible to generate a vector of correlated standard Gaussian random variables \textbf{$\epsilon$} via a vector of uncorrelated such variables $\textbf{x}$, by multiplying it with the Cholesky decomposition $L$ of the correlation matrix $\Sigma$ \ :
+\begin{equation*}
+\epsilon = L \textbf{x}
+\end{equation*}
+
+\section{The dynamics of the variance}
+Let us take a closer look at the stochastic process followed by the variance:
+\begin{equation}\label{variance process}
+d\nu_t = \kappa(\theta - \nu_t)dt + \eta\sqrt{\nu_t}dW_t^\nu
+\end{equation}
+We observe that for large values of $\eta$ the variance process becomes less stable and we wonder if this can push it towards negative values. Feller investigated the phenomenon in 1951. More precisely we have $P(\nu_t = 0) = 0$ when $2\kappa\theta > \eta^2$. We denote this the Feller condition and points to the fact that the variance process will stick away from zero when the mean-reverting term is strong enough. \\
+\newline
+However, consider a Forward Euler discretization of \ref{variance process}:
+\begin{equation}\label{ForwardEuler}
+\nu_{i+1} = \nu_{i} + \kappa(\theta - \nu_{i})\Delta t + \eta\sqrt{\nu_{i}}\sqrt{\Delta t}Z_i^\nu
+\end{equation}
+with $Z_\nu$ a standard normal random variable. Given the finite discretization of a continuous stochastic process, the next step variance can turn negative due to discretization errors. In fact:
+\begin{equation} \label{positiveProb}
+	\begin{aligned}
+	P(\nu(t+ \Delta t)<0 \ | \ \nu(t)) &= P \left ( Z^\nu < \frac{\kappa(\nu(t) - \theta)\Delta t - \nu(t)}{\eta\sqrt{\nu(t)\Delta t}} \ \Bigg| \ \nu(t) 	\right ) \\
+	&= \Phi \left ( \frac{\kappa(\nu(t) - \theta)\Delta t - \nu(t)}{\eta\sqrt{\nu(t)\Delta t}} \right )
+	\end{aligned}
+\end{equation}
+with $\Phi(x)$ the cumulative distribution function (CDF) of a standard normal RV. The argument of $\Phi$ in \ref{positiveProb} is strictly positive, hence there is a positive probability of negative discretized path using Forward Euler, even if the Feller condition holds. This is phisically incorrect and it breaks down the scheme, since in subsequent steps the square root of the variance ought to be used. The chance of breaking down the discretization scheme increases with $\Delta t$ and with $\eta$, i.e. when the discretization is less accurate and when the vol of vol is higher.
+\section{Discretization schemes}
+The mathematical finance literature has proposed various numerical schemes that handle the problem of negative variance over the last years, in response to the question whether the Feller condition is strong enough in practice.
+\subsection{Euler-Maruyama scheme}
+In order to overcome the possibility of negative values of variance showing up we need to modify the discretization formula \ref{ForwardEuler}. Let us introduce three functions $f_1, f_2, f_3$ that will handle negative values. The Forward Euler discretization becomes:
+\begin{equation}\label{ForwardEulerFunctions}
+\nu_{i+1} = f_1(\nu_{i}) + \kappa(\theta - f_2(\nu_{i}))\Delta t + \eta\sqrt{f_3(\nu_{i})}\sqrt{\Delta t}Z_i^\nu
+\end{equation}
+To prevent $\nu(t + \Delta t)$ to become negative one technique is to project negative values to zero. Instead of projection, reflection (taking the absolute value) could be used for the same purpose. This leads to separate discretization schemes:
+\begin{table}[htb]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+Scheme				&	$f_1$	&	$f_2$	&	$f_3$	\\
+\hline
+Reflection			&	$|x|$	&	$|x|$	&	$|x|$	\\
+Partial truncation	&	$x$		&	$x$		&	$x^+$	\\
+Full truncation		&	$x$		&	$x^+$	&	$x^+$	\\
+\hline
+\end{tabular}
+\caption*{with $x^+ = \text{max}(x,0)$}
+\end{table}
+\newline
+In Lord et. al (*Insert reference*) it has been shown that the Full Truncation scheme contains the least discretization bias. In this case the discretized Heston equations then become the following:
+\begin{align}\label{FullTruncation}
+		\nu_{i+1} &= \nu_{i} + \kappa(\theta - \nu_{i}^+)\Delta t + \eta\sqrt{\nu_{i}^+}\sqrt{\Delta t}Z_i^\nu \\
+		\label{FullTruncation2}		
+		S_{i+1} &= S_i \ \text{exp} \left ( \left (r - \frac{\nu_i^+}{2} \right  ) \Delta t + \sqrt{\nu_i^+} \sqrt{\Delta t} Z_i^S \right )
+\end{align}
+The scheme is straightforward, but contains bias that increases with the size of the time step. The Full truncation's accuracy decreases in $\Delta t$, as it happens with all the Forward Euler schemes. The bias increases also with the number of applied projections, which is significant when the Feller condition is close to being violated.
+\subsection{Milstein scheme}
+The Milstein method includes an additional term from the It\^o-Taylor expansion. Consider the following SDE:
+\begin{equation*}
+dX_t = a(X_t)dt + b(X_t)dW_t
+\end{equation*}
+The Milstein approximation is recursively defined as
+\begin{equation*}
+X_{n+1} = X_n + a(X_n)\Delta t + b(X_n)\Delta W_n + \frac{1}{2}b(X_n)b'(X_n)( (\Delta W_n)^2 - \Delta t ),
+\end{equation*}
+where $b'$ denotes the derivative of $b(x)$ with respect to $x$. When the diffusion term does not depend on $X_t$, $b'(X_t)=0$ and the method is equivalent to the Euler sheme. The Milstein scheme has both weak and strong order of convergence of $\Delta t$, while the Euler-Maruyama discretization shows the same weak order of convergence, but inferior strong convergence of $\sqrt{\Delta t}$.\\
+\newline	
+As for the Euler scheme, the Milstein method maintains a positive probability of generating negative values of $X_t$ and therefore has to incorporate, for example, a full truncation adjustment. Applying the Milstein scheme to the variance process we obtain the following discretization for the Heston model:
+\begin{equation}\label{Milstein}
+	\begin{aligned}
+		\nu_{i+1} &= \nu_{i} + \kappa(\theta - \nu_{i}^+)\Delta t + \eta\sqrt{\nu_{i}^+}\sqrt{\Delta t}Z_i^\nu + \frac{\eta^2}{4}\Delta t \ ( (Z_i^\nu)^2 - 1 ) \\
+		S_{i+1} &= S_i \ \text{exp} \left ( \left (r - \frac{\nu_i^+}{2} \right  ) \Delta t + \sqrt{\nu_i^+} \sqrt{\Delta t} Z_i^S \right )
+	\end{aligned}
+\end{equation}
+\subsection{Kahl-J\"ackel scheme}
+Kahl and J\"ackel *reference here* suggested an implicit Milstein scheme together with an alternative discretization for the stock price:
+\begin{align}\label{IMPMilstein}
+			\nu_{i+1} &= \frac{\nu_i + \kappa \theta \Delta t + \eta \sqrt{\nu_i}\sqrt{\Delta t}Z_i^\nu + \frac{\eta^2}{4}\Delta t ((Z_i^\nu)^2 - 1 ))}{1 + \kappa \Delta t} \\
+			\begin{split}
+			\label{IMPMilstein2}
+			S_{i+1} &= S_i \ \text{exp} \left ( \left (r - \frac{\nu_i + \nu_{i+1}}{4} \right ) \Delta t + \rho\sqrt{\nu_i}\sqrt{\Delta t}Z_i^\nu + \right.  \\ 
+			&\mathrel{\phantom{=}} \left. + \frac{1}{2} (\sqrt{\nu_i} + \sqrt{\nu_{i+1}} )(Z_i^S - \rho Z_i^\nu)\sqrt{\Delta t} - \frac{\rho \eta \Delta t}{4} ((Z_i^\nu)^2 - 1) \vphantom{\frac{\nu_i + \nu_{i+1}}{4}} \right )
+		\end{split}
+\end{align}
+In this scheme, the variance stays positive provided that $4\kappa \theta > \eta^2$. As usually is the case, the condition is rarely met in practice, so one has to apply adjustments once again. Kahl and J\"ackel do not tackle this issue, but Andersen *reference here* applies a full truncation, following Lord et al *reference here*. He suggests that, whenever the variance process drops below zero, \ref{FullTruncation} shall be used in place of \ref{Milstein} and $\nu_i^+$ and $\nu_{i+1}^+$ shall be taken in \ref{IMPMilstein2}.
+\subsection{Transformed Volatility scheme}
+Zhu *reference here* prevents the breakdown of the computation of the square-root process in a different way: one that avoids the approximation of the process with the term $\sqrt{\nu(t)}$. The Transformed Volatility (TV) scheme discretizes the dynamics of the volatility instead of one for the variance. Let $\gamma_t = \sqrt{\nu_t}$ denote the stochastic volatility in the Heston model. Applying It\^o's lemma on \ref{variance process} we obtain the following dynamics for the stochastic volatility:
+\begin{equation}\label{stochastic vol}
+	\begin{aligned}
+		d\gamma_t &= \frac{1}{2}\kappa \left( \left( \theta - \frac{\eta^2}{4\kappa} \right) \gamma_t^{-1} - \gamma_t \right) dt + \frac{\eta}{2}dW_t^\gamma \\
+		&= \kappa_\gamma (\theta_\gamma - \gamma_t) dt + \eta_\gamma dW_t^\gamma
+	\end{aligned}
+\end{equation}
+Compared to the process of $\nu_t$ given in \ref{variance process}, now the volatility process $\gamma_t$ is mean-reverting and does not have any square-root term. The speed of reversion and the vol of vol are half the values of the corresponding variance process. It is worth taking a look at the long-term volatility $\theta_\gamma$, that is now stochastic. This means that the volatility will not converge to a given value. \\
+\newline
+The stochastic processes \ref{HestonStock} and \ref{stochastic vol} form a stochastic volatility model that coincides to the Heston model, but expresses the dynamics in terms of volatility, not variance. The stochastic volatility process is not restricted to any parameter constraint, while the variance process has to meet the Feller condition. Notice that the volatility can turn negative, but without affecting the distribution of the stock dynamics, by symmetry of the Brownian motion. \\
+\newline
+The Transformed Volatility scheme is then as follows:
+\begin{align}\label{TV}
+		\gamma_{i+1} &= \gamma_{i} + \frac{1}{2}\kappa(\theta_\gamma - \gamma_{i})\Delta t + \frac{1}{2}\eta\sqrt{\Delta t}Z_i^\gamma \\
+		\label{TV2}		
+		S_{i+1} &= S_i \ \text{exp} \left ( \left (r - \frac{\gamma_i^2}{2} \right  ) \Delta t + \gamma_i \sqrt{\Delta t} Z_i^S \right )
+\end{align}
+
+
+
+The most important pitfall of the TV scheme is that the mean level of stochastic volatility
+\begin{equation}
+\theta_\gamma = \left( \theta - \frac{\eta^2}{4\kappa} \right) \gamma_t^{-1}
+\end{equation}
+has a term $\gamma_t^{-1}$ that makes it stochastic. The discretization scheme cannot capture the erratic behavior of $\gamma_t^{-1}$ in the time interval $[t, t + \Delta t]$. This causes $\theta_\gamma$ to jump between large positive and large negative values in a short time. The value of $\theta_\gamma$ at time $t$ is not representative for the whole interval. Zhu proposes the following approximation for $\theta_\gamma$.
+\subsubsection*{Central discretization}
+The idea is to evaluate $\theta_\gamma$ using an average of $\gamma_t$ in the time interval $[t, t + \Delta t]$. We define
+\begin{equation*}
+\gamma^*_t = \frac{1}{\Delta} \int_{t}^{t+\Delta t} \gamma(s)ds \approx \frac{1}{2}(\gamma_t + \gamma_{t+\Delta t})
+\end{equation*}
+But $\gamma_{t+\Delta t}$ is unknown at time $t$, so it is replaced by an expected value $u(t+\Delta t)$
+\begin{equation*}
+u_{t+\Delta t} = \gamma_t + \frac{1}{2}\kappa \left( \left( \theta - \frac{\eta^2}{4\kappa} \right) \gamma_t^{-1} - \gamma_t \right) \Delta t
+\end{equation*}
+Therefore the value for $\gamma^*_t$ is the approximated average
+\begin{equation}
+\gamma^*_t \approx \frac{1}{2}(\gamma_t + u_{t+\Delta t})
+\end{equation}
+The long-term mean level is then calculated with $\gamma^*_t$:
+\begin{equation}
+\theta^*_\gamma =  \left( \theta - \frac{\eta^2}{4\kappa} \right) \Big/ \gamma^*_t
+\end{equation}
+The modified Euler scheme becomes
+\begin{equation}
+\gamma_{i+1} = \gamma_{i} + \frac{1}{2}\kappa(\theta^*_\gamma - \gamma_{i})\Delta t + \frac{1}{2}\eta\sqrt{\Delta t}Z_i^\gamma
+\end{equation}
+\subsubsection*{Moment matching}
+Zhu proposes a better way to obtain $\theta_\gamma$ through moment matching. Observing that $\mathbb{E}[\gamma_t^2]=\mathbb{E}[\nu_t]$, we have
+\begin{equation*}
+\mathbb{E}[\gamma_{t+\Delta t}^2]=\mathbb{E}[\nu_{t+\Delta t}] =\textbf{Var}[\gamma_{t+\Delta t}] + \mathbb{E}[\gamma	_{t+\Delta t}]^2
+\end{equation*}
+where,
+\begin{align*}
+\mathbb{E}[\nu_{t+\Delta t}] &= m_1(t) = \theta + (\nu_t - \theta)e^{-\kappa \Delta t} \\
+\textbf{Var}[\gamma_{t+\Delta t}] &=  m_2(t) = \frac{\eta^2}{4\kappa}(1-e^{-\kappa \Delta t}) \\
+\mathbb{E}[\gamma_{t+\Delta t}] &= \theta_\gamma + (\gamma_t - \theta_\gamma)e^{-\frac{1}{2}\kappa\Delta t}
+\end{align*}
+Rearranging yields an equation in the unknown variable $\theta_\nu$ which shows the following expression:
+\begin{equation*}
+\theta_\gamma = \frac{\beta - \gamma_te^{-\frac{1}{2}\kappa\Delta t}}{1-e^{-\frac{1}{2}\kappa\Delta t}}
+\end{equation*}
+with
+\begin{equation*}
+\beta = \sqrt{[m_1(t)-m_2(t)]^+}
+\end{equation*}
+Zhu recommends the moment matching method in practical applications, although it is computationally more demanding.
+\section{Numerical results}
+This section provides briefly efficiency tests of the discretized schemes. The tests consider the pricing of an European call option, whose Heston parameters are taken from Broadie and Kaya **insert reference here**. They are conducted using a simple Monte Carlo simulation, taking as estimate for the option price the sample mean, an unbiased and consistent estimator. However, since we are discretizing a continuous-time process, we are introducing bias due to discretization errors. In order to lower the bias, the discretization mesh shall be finer, but this will lead to more computational effort. Due to computational budget constraints, a finer mesh will bring to smaller numbers of simulations, thus increasing the variance of the estimator. The measure that catches the contribution of both bias and variance is the Mean Square Error (MSE). Let $\hat{C}$ denote the Monte Carlo estimate for the European call option and $C$ its true price. The MSE is defined as: \\
+\begin{equation}
+\text{MSE} = \text{bias}(\hat{C})^2 + \text{variance}(\hat{C})
+\end{equation}
+with
+\begin{align}
+\text{bias}(\hat{C}) &= \mathbb{E}[\hat{C}-C] \\
+\text{variance}(C) &= \mathbb{E}[(\hat{C}-\mathbb{E}[\hat{C}])^2]
+\end{align}
+
+\section{The code}
+The code is written in C++ and is freely available under the GNU License at \url{https://github.com/mirceas08/heston-mc}. You need to be on a {\it UNIX}-type system to be able to run it. The following dependencies must be met:
+\begin{itemize}
+  \item C++ compiler with C++11 support
+  \item Armadillo: high quality C++ linear algebra library used throughout the whole code. It integrates with LAPACK and BLAS. Use Armadillo without installation by including the headers and linking against BLAS and LAPACK instead
+  \item OpenBLAS: multi-threaded replacement of traditional BLAS. Recommended for significantly higher performance. Otherwise link with traditional BLAS and LAPACK.
+\end{itemize} 
+The code is written in an object-oriented manner to improve maintainability. \textit{PayOff} and \textit{HestonDiscretization} are abstract classes that allow to plug-in different option types and different discretization schemes. We make use of the operator() to turn the payoff classes into a functor. This means that we can call the object just as we would do with a function. Calling a \textit{PayOff} object has the effect of calculating the payoff and returning it.\\
+\newline
+To run the code you must first compile it. In the \textit{Makefile} edit the entries regarding the location of headers and libraries. Then compile using
+\begin{verbatim}
+make
+\end{verbatim}
+Check the file \textit{parameters.dat} and modify entries to your pleasure. Run the code with the following command
+\begin{verbatim}
+./heston-mc
+\end{verbatim}
+
+
+
+\newpage
+
+\begin{thebibliography}{9}
+\bibitem{Povh} 
+J. Povh, F. Rendl, A. Wiegele. 
+A boundary point method to solve semidefinite programs,
+\textit{Computing}, 78(3):277-286, November 2006.
+ 
+\bibitem{Armadillo} 
+C. Sanderson 
+Armadillo: an open source C++ linear algebra library for fast prototyping and computationally intensive experiments
+\textit{Technical Report}, NICTA, 2010.
+ 
+\bibitem{Eigen} 
+Ga\"{e}l Guennebaud and Beno\^{i}t Jacob and others.
+\textit{Eigen v3},
+Retrieved from \textit{http://eigen.tuxfamily.org}, 2010
+\end{thebibliography}
+
+\end{document}
+
