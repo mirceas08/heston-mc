@@ -234,7 +234,7 @@ with
 \end{equation*}
 Zhu recommends the moment matching method in practical applications, although it is computationally more demanding.
 \section{Numerical results}
-This section provides briefly efficiency tests of the discretized schemes. The tests consider the pricing of an European call option, whose Heston parameters are taken from Broadie and Kaya **insert reference here**. They are conducted using a simple Monte Carlo simulation, taking as estimate for the option price the sample mean, an unbiased and consistent estimator. However, since we are discretizing a continuous-time process, we are introducing bias due to discretization errors. In order to lower the bias, the discretization mesh shall be finer, but this will lead to more computational effort. Due to computational budget constraints, a finer mesh will bring to smaller numbers of simulations, thus increasing the variance of the estimator. The measure that catches the contribution of both bias and variance is the Mean Square Error (MSE). Let $\hat{C}$ denote the Monte Carlo estimate for the European call option and $C$ its true price. The MSE is defined as: \\
+This section provides briefly efficiency tests of the discretized schemes. The tests consider the pricing of an European call option, whose true price and its Heston parameters are taken from Broadie and Kaya **insert reference here**. The tests are conducted using a simple Monte Carlo simulation, taking as estimate for the option price the sample mean, an unbiased and consistent estimator. However, since we are discretizing a continuous-time process, we are introducing bias due to discretization errors. In order to lower the bias, the discretization mesh shall be finer, but this will lead to more computational effort. Due to computational budget constraints, a finer mesh will bring to smaller numbers of simulations, thus increasing the variance of the estimator. The measure that catches the contribution of both bias and variance is the Mean Square Error (MSE). Let $\hat{C}$ denote the Monte Carlo estimate for the European call option and $C$ its true price. The MSE is defined as: \\
 \begin{equation}
 \text{MSE} = \text{bias}(\hat{C})^2 + \text{variance}(\hat{C})
 \end{equation}
@@ -243,8 +243,12 @@ with
 \text{bias}(\hat{C}) &= \mathbb{E}[\hat{C}-C] \\
 \text{variance}(C) &= \mathbb{E}[(\hat{C}-\mathbb{E}[\hat{C}])^2]
 \end{align}
-
-\section{The code}
+The bias for a specific number of time steps is estimated using 20 million simulations to estimate $\mathbb{E}[\hat{C}]$, and then taking the difference with the true price. The variance of each simulation is simply the sample variance of the simulation output.\\
+\newline
+The experiments are performed sequentially on CINECA's supercomputer \textit{Galileo} with an Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz. The code is written in C++ and more info about it can be found in \ref{code}.\\
+\newline
+Duffy and Glynn **reference here** study the optimal allocation between number of simulations and number of time steps. Their results imply that it is optimal to pick number of time steps proportional to the square root of the number of simulation trials, although the constant of proportionality is not defined by them.
+\section{The code} \label{code}
 The code is written in C++ and is freely available under the GNU License at \url{https://github.com/mirceas08/heston-mc}. You need to be on a {\it UNIX}-type system to be able to run it. The following dependencies must be met:
 \begin{itemize}
   \item C++ compiler with C++11 support
