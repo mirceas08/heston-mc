@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     }
 
     transform(discretizationScheme.begin(), discretizationScheme.end(), discretizationScheme.begin(), ::toupper);
-
+    double trueOptionPrice = 6.8061;
     /* ------------------------ Set correlation matrix and compute Cholesky ------------------------ */
     mat correlationMatrix = eye<mat>(2,2);
     correlationMatrix(0,1) = rho;
@@ -102,7 +102,12 @@ int main(int argc, char **argv)
     volPath.fill(v0);
 
     vec payoff(numSims);
+    payoff.fill(0.0);
     double optionPrice;
+
+    // Timer
+    wall_clock timer;
+    timer.tic();
 
     for (int i = 0; i < numSims; i++) {
         mat correlatedPath = zeros<mat>(2, numIntervals+1);
@@ -117,16 +122,44 @@ int main(int argc, char **argv)
             scheme->calculateStockPath(correlatedPath.row(0), volPath, stockPath);
         }
 
-        payoff(i) += myOption->payoff->operator()(stockPath(numIntervals)) * std::exp(-r*T);
+        payoff(i) = myOption->payoff->operator()(stockPath(numIntervals)) * std::exp(-r*T);
     }
 
+    // option price
     optionPrice = sum(payoff) / static_cast<double>(numSims);
-    cout << "Option price with " << discretizationScheme << ": " << optionPrice << endl;
 
-    double sampleVar = var(payoff);
-    double standardError = std::sqrt(sampleVar/numSims);
+    double timeElapsed = timer.toc();
 
+    // bias
+    double bias = optionPrice - trueOptionPrice;
+
+    // variance and standard error
+    double stdDev = stddev(payoff);
+    double variance = var(payoff)/numSims;
+    double standardError = std::sqrt(variance);
+
+    // MSE
+    double mse = (bias*bias) + variance;
+    double rmse = std::sqrt(mse);
+
+
+    // Output
+    cout << "********************************************************" << endl;
+    cout << "Monte Carlo simulation - Heston model" << endl;
+    cout << "-------------------------------------------------------" << endl;
+    cout << "Discretization scheme: " << discretizationScheme << endl;
+    cout << "Number of simulations: " << numSims << endl;
+    cout << "Number of time steps: " << numIntervals << endl;
+    cout << "-------------------------------------------------------" << endl;
+    cout << "Option price: " << discretizationScheme << ": " << optionPrice << endl;
+    cout << "Bias: " << bias << endl;
+    cout << "Variance: " << variance << endl;
     cout << "Standard error: " << standardError << endl;
+    cout << "Mean square error: " << mse << endl;
+    cout << "Root mean square error: " << rmse << endl;
+    cout << "-------------------------------------------------------" << endl;
+    cout << "Elapsed time: " << timeElapsed << endl;
+    cout << "********************************************************" << endl;
 
     delete myPayoff;
     delete myOption;
