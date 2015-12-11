@@ -99,7 +99,10 @@ int main(int argc, char **argv)
     vec stockPath = zeros<vec>(numIntervals+1);
     vec volPath = zeros<vec>(numIntervals+1);
     stockPath.fill(S0);
-    volPath.fill(v0);
+    if (discretizationScheme == "TV_CD" || discretizationScheme == "TV_MM")
+        volPath.fill(std::sqrt(v0)); // need volatility for Transformed Volatility scheme
+    else
+        volPath.fill(v0);
 
     vec payoff(numSims);
     payoff.fill(0.0);
