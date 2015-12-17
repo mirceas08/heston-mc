@@ -26,6 +26,9 @@
 \usepackage{mathrsfs}
 \usepackage{caption}
 \usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{tabu}
+\usepackage{booktabs}% for better rules in the table
 \usepackage{hyperref}
 \numberwithin{equation}{section}
 \newcommand{\bs}{\mathbf{s}}
@@ -84,7 +87,7 @@ In particular, let us pick the case of standard normal random variables, which s
 \Sigma_{LZ} 	&= \mathbb{E}[ (L\textbf{Z} - \mathbb{E}[L\textbf{Z}]) (L\textbf{Z} - \mathbb{E}[L\textbf{Z}])^T ] = \mathbb{E}[L\textbf{Z}(L\textbf{Z})^T] \\
 &= \mathbb{E}[L\textbf{Z}\textbf{Z}^TL^T] = L \mathbb{E}[\textbf{ZZ}^T] L^T = LIL^T = LL^T = \Sigma 
 \end{align*}
-In conclusion, it is possible to generate a vector of correlated standard Gaussian random variables \textbf{$\epsilon$} via a vector of uncorrelated such variables $\textbf{x}$, by multiplying it with the Cholesky decomposition $L$ of the correlation matrix $\Sigma$ \ :
+In conclusion, it is possible to generate a vector of correlated standard Gaussian random variables \textbf{$\epsilon$} via a vector of uncorrelated such variables $\textbf{x}$, by multiplying it by the Cholesky decomposition $L$ of the correlation matrix $\Sigma$:
 \begin{equation*}
 \epsilon = L \textbf{x}
 \end{equation*}
@@ -94,7 +97,7 @@ Let us take a closer look at the stochastic process followed by the variance:
 \begin{equation}\label{variance process}
 d\nu_t = \kappa(\theta - \nu_t)dt + \eta\sqrt{\nu_t}dW_t^\nu
 \end{equation}
-We observe that for large values of $\eta$ the variance process becomes less stable and we wonder if this can push it towards negative values. Feller investigated the phenomenon in 1951. More precisely we have $P(\nu_t = 0) = 0$ when $2\kappa\theta > \eta^2$. We denote this the Feller condition and points to the fact that the variance process will stick away from zero when the mean-reverting term is strong enough. \\
+We observe that for large values of $\eta$ the variance process becomes less stable and we wonder if this can push it towards negative values. Feller investigated the phenomenon in 1951. More precisely we have $P(\nu_t = 0) = 0$ when $2\kappa\theta > \eta^2$. We denote this the Feller condition, which points to the fact that the variance process will stick away from zero when the mean-reverting term is strong enough. \\
 \newline
 However, consider a Forward Euler discretization of \ref{variance process}:
 \begin{equation}\label{ForwardEuler}
@@ -191,7 +194,7 @@ The most important pitfall of the TV scheme is that the mean level of stochastic
 \begin{equation}
 \theta_\gamma = \left( \theta - \frac{\eta^2}{4\kappa} \right) \gamma_t^{-1}
 \end{equation}
-has a term $\gamma_t^{-1}$ that makes it stochastic. The discretization scheme cannot capture the erratic behavior of $\gamma_t^{-1}$ in the time interval $[t, t + \Delta t]$. This causes $\theta_\gamma$ to jump between large positive and large negative values in a short time. The value of $\theta_\gamma$ at time $t$ is not representative for the whole interval. Zhu proposes the following approximation for $\theta_\gamma$.
+has a term $\gamma_t^{-1}$ that makes it stochastic. The discretization scheme cannot capture the erratic behavior of $\gamma_t^{-1}$ in the time interval $[t, t + \Delta t]$. This causes $\theta_\gamma$ to jump between large positive and large negative values in a short time. The value of $\theta_\gamma$ at time $t$ is not representative for the whole interval. Zhu proposes the following approximations for $\theta_\gamma$.
 \subsubsection*{Central discretization}
 The idea is to evaluate $\theta_\gamma$ using an average of $\gamma_t$ in the time interval $[t, t + \Delta t]$. We define
 \begin{equation*}
@@ -214,7 +217,7 @@ The modified Euler scheme becomes
 \gamma_{i+1} = \gamma_{i} + \frac{1}{2}\kappa(\theta^*_\gamma - \gamma_{i})\Delta t + \frac{1}{2}\eta\sqrt{\Delta t}Z_i^\gamma
 \end{equation}
 \subsubsection*{Moment matching}
-Zhu proposes a better way to obtain $\theta_\gamma$ through moment matching. Observing that $\mathbb{E}[\gamma_t^2]=\mathbb{E}[\nu_t]$, we have
+The author proposes a better way to obtain $\theta_\gamma$ through moment matching. Observing that $\mathbb{E}[\gamma_t^2]=\mathbb{E}[\nu_t]$, we have
 \begin{equation*}
 \mathbb{E}[\gamma_{t+\Delta t}^2]=\mathbb{E}[\nu_{t+\Delta t}] =\textbf{Var}[\gamma_{t+\Delta t}] + \mathbb{E}[\gamma	_{t+\Delta t}]^2
 \end{equation*}
@@ -234,25 +237,86 @@ with
 \end{equation*}
 Zhu recommends the moment matching method in practical applications, although it is computationally more demanding.
 \section{Numerical results}
-This section provides briefly efficiency tests of the discretized schemes. The tests consider the pricing of an European call option, whose true price and its Heston parameters are taken from Broadie and Kaya **insert reference here**. The tests are conducted using a simple Monte Carlo simulation, taking as estimate for the option price the sample mean, an unbiased and consistent estimator. However, since we are discretizing a continuous-time process, we are introducing bias due to discretization errors. In order to lower the bias, the discretization mesh shall be finer, but this will lead to more computational effort. Due to computational budget constraints, a finer mesh will bring to smaller numbers of simulations, thus increasing the variance of the estimator. The measure that catches the contribution of both bias and variance is the Mean Square Error (MSE). Let $\hat{C}$ denote the Monte Carlo estimate for the European call option and $C$ its true price. The MSE is defined as: \\
+This section provides briefly efficiency tests of the discretized schemes. The tests consider the pricing of an European call option, whose true price and its Heston parameters are taken from Broadie and Kaya **insert reference here**. The tests are conducted using a simple Monte Carlo simulation, taking as estimate for the option price the sample mean, an unbiased and consistent estimator. However, since we are discretizing a continuous-time process, we are introducing bias due to discretization errors. In order to lower the bias, the discretization mesh shall be finer, but this will lead to more computational effort. Due to computational budget constraints, a finer mesh will bring to smaller numbers of simulations, thus increasing the variance of the estimator. The measure that catches the contribution of both bias and variance is the Root Mean Square Error (RMSE). Let $\hat{C}$ denote the Monte Carlo estimate for the European call option and $C$ its true price. The RMSE is defined as: \\
 \begin{equation}
-\text{MSE} = \text{bias}(\hat{C})^2 + \text{variance}(\hat{C})
+\text{RMSE} = \sqrt{\text{bias}(\hat{C})^2 + \text{variance}(\hat{C})}
 \end{equation}
 with
 \begin{align}
 \text{bias}(\hat{C}) &= \mathbb{E}[\hat{C}-C] \\
-\text{variance}(C) &= \mathbb{E}[(\hat{C}-\mathbb{E}[\hat{C}])^2]
+\text{variance}(\hat{C}) &= \mathbb{E}[(\hat{C}-\mathbb{E}[\hat{C}])^2]
 \end{align}
 The bias for a specific number of time steps is estimated using 20 million simulations to estimate $\mathbb{E}[\hat{C}]$, and then taking the difference with the true price. The variance of each simulation is simply the sample variance of the simulation output.\\
 \newline
 The experiments are performed sequentially on CINECA's supercomputer \textit{Galileo} with an Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz. The code is written in C++ and more info about it can be found in \ref{code}.\\
 \newline
-Duffy and Glynn **reference here** study the optimal allocation between number of simulations and number of time steps. Their results imply that it is optimal to pick number of time steps proportional to the square root of the number of simulation trials, although the constant of proportionality is not defined by them.
+Duffy and Glynn **reference here** study the optimal allocation between number of simulations and number of time steps. Their results imply that it is optimal to a pick number of time steps proportional to the square root of the number of simulation trials, although the constant of proportionality is not defined by them. All the simulations are done with a constant of proportionality equal to one, and some tests with different values are performed only on some of the discretization schemes. \\
+
+\begin{table}
+\begin{tabu} to \textwidth {X[c1.5]|X[c1.5]|X[c]|X[c]|X[c]|X[c]|}
+	\toprule
+   	Number of simulations & Number of time steps & Bias & Standard Error & RMSE & Time (sec.) \\
+	\toprule
+	40000 	& 200 	& 0.0385 	& 0.0372	 & 0.0724 & 1.1668 	\\
+    250000 	& 500 	& 0.0337 	& 0.0148 & 0.0299 & 18.1053 	\\
+    1000000 	& 1000 	& 0.0221 	& 0.0074 & 0.0199 & 142.534	\\
+    9000000 	& 3000 	& 0.0126 	& 0.0025 & 0.0110 & 3945.28	\\
+   \bottomrule
+\end{tabu}
+\caption{Euler - Full truncation}
+\end{table}
+
+\begin{table}
+\begin{tabu} to \textwidth {X[c1.5]|X[c1.5]|X[c]|X[c]|X[c]|X[c]|}
+	\toprule
+   	Number of simulations & Number of time steps & Bias & Standard Error & RMSE & Time (sec.) \\
+	\toprule
+	40000 	& 200 	& 0.0347 & 0.0368 & 0.0414 & 1.2078 	\\
+    250000 	& 500 	& 0.0412 & 0.0148 & 0.0602 & 18.6175 \\
+    1000000	& 1000 	& 0.0316 & 0.0074 & 0.0271 & 124.183	 \\
+    9000000 	& 3000 	& 0.0158 & 0.0024 & 0.0181 & 3250.11	\\
+   \bottomrule
+\end{tabu}
+\caption{Milstein}
+\end{table}
+
+\begin{table}
+\begin{tabu} to \textwidth {X[c1.5]|X[c1.5]|X[c]|X[c]|X[c]|X[c]|}
+	\toprule
+   	Number of simulations & Number of time steps & Bias & Standard Error & RMSE & Time (sec.) \\
+	\toprule
+	40000 	& 200 	& 0.0386 & 0.0373 & 0.0377 & 1.43441 \\
+    250000 	& 500 	& 0.0416 & 0.0148 & 0.0484 & 24.0214 \\
+    1000000	& 1000 	& 0.0320 & 0.0074 & 0.0257 & 170.565 \\
+    9000000 	& 3000 	& 0.0196 & 0.0025 & 0.0143 & 4421.28 \\
+   \bottomrule
+\end{tabu}
+\caption{Kahl-J\"ackel}
+\end{table}
+
+\begin{table}
+\begin{tabu} to \textwidth {X[c1.5]|X[c1.5]|X[c]|X[c]|X[c]|X[c]|}
+	\toprule
+   	Number of simulations & Number of time steps & Bias & Standard Error & RMSE & Time (sec.) \\
+	\toprule
+	40000 	& 200 	& 0.0366 & 0.0374 & 0.0541 & 1.50487 \\
+    250000 	& 500 	& 0.0355 & 0.0149 & 0.0559 & 20.9216 \\
+    1000000	& 1000 	& 0.0227 & 0.0074 & 0.0237 & 201.239	\\
+    9000000 	& 3000 	& 0.0127 & 0.0025 & 0.0152 & 4713.92	\\
+   \bottomrule
+\end{tabu}
+\caption{Transformed Volatility with moment matching}
+\end{table}
+
+
+
+
+
 \section{The code} \label{code}
 The code is written in C++ and is freely available under the GNU License at \url{https://github.com/mirceas08/heston-mc}. You need to be on a {\it UNIX}-type system to be able to run it. The following dependencies must be met:
 \begin{itemize}
   \item C++ compiler with C++11 support
-  \item Armadillo: high quality C++ linear algebra library used throughout the whole code. It integrates with LAPACK and BLAS. Use Armadillo without installation by including the headers and linking against BLAS and LAPACK instead
+  \item Armadillo: high quality C++ linear algebra library used throughout the whole code. It integrates with LAPACK and BLAS. Use Armadillo without installation by including the headers and link against BLAS and LAPACK instead
   \item OpenBLAS: multi-threaded replacement of traditional BLAS. Recommended for significantly higher performance. Otherwise link with traditional BLAS and LAPACK.
 \end{itemize} 
 The code is written in an object-oriented manner to improve maintainability. \textit{PayOff} and \textit{HestonDiscretization} are abstract classes that allow to plug-in different option types and different discretization schemes. We make use of the operator() to turn the payoff classes into a functor. This means that we can call the object just as we would do with a function. Calling a \textit{PayOff} object has the effect of calculating the payoff and returning it.\\
@@ -263,7 +327,7 @@ make
 \end{verbatim}
 Check the file \textit{parameters.dat} and modify entries to your pleasure. Run the code with the following command
 \begin{verbatim}
-./heston-mc
+./heston-mc data/parameters.dat
 \end{verbatim}
 
 
