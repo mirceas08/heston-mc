@@ -29,11 +29,12 @@ int main(int argc, char **argv)
     double rho;                             // correlation between the two processes
     std::string discretizationScheme;       // discretization scheme
 
-    std::string dataFile = "data/data.dat";
+    std::string dataFile = argv[1];
     std::ifstream fIN(dataFile.c_str());
     std::string line;
 
-    while (std::getline(fIN, line)) {
+    if (fIN.is_open()) {
+        while (std::getline(fIN, line)) {
         std::stringstream stream(line);
         std::string variable;
         std::string value;
@@ -64,6 +65,11 @@ int main(int argc, char **argv)
             rho = atof(value.c_str());
         else if (variable == "discretizationScheme")
             discretizationScheme = value;
+        }
+    }
+    else {
+        cout << "Error opening file" << endl;
+        return -1;
     }
 
     transform(discretizationScheme.begin(), discretizationScheme.end(), discretizationScheme.begin(), ::toupper);
@@ -154,7 +160,7 @@ int main(int argc, char **argv)
     cout << "Number of simulations: " << numSims << endl;
     cout << "Number of time steps: " << numIntervals << endl;
     cout << "-------------------------------------------------------" << endl;
-    cout << "Option price: " << discretizationScheme << ": " << optionPrice << endl;
+    cout << "Option price: " << optionPrice << endl;
     cout << "Bias: " << bias << endl;
     cout << "Variance: " << variance << endl;
     cout << "Standard error: " << standardError << endl;
