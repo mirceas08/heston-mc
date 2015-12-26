@@ -170,6 +170,7 @@ int main(int argc, char **argv)
     cout << "Elapsed time: " << timeElapsed << endl;
     cout << "********************************************************" << endl;
 
+    // clear from the heap
     delete myPayoff;
     delete myOption;
     delete scheme;
